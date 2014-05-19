@@ -4,20 +4,19 @@ use strict;
 use warnings;
 
 use Net::LDAP;
+use YAML qw(LoadFile);
 
-my $ldaphost = "";
-my $bind_dn  = "";
-my $bind_pw  = "";
-my $basedn   = "";
+# Load configuration
+my $settings = LoadFile('../../ldapconf.conf');
 
 my $alias;
 my @destinations;
 my $answer;
 
-my $ldap = Net::LDAP->new($ldaphost);
+my $ldap = Net::LDAP->new($settings->{'aliases'}->{'host'});
 
-my $mesg = $ldap->bind( "$bind_dn", password => "$bind_pw");
-$mesg->code && die "Couldn't connect: $mesg->error\n";
+my $mesg = $ldap->bind($settings->{'aliases'}->{'bind_dn'}, password => $settings->{'aliases'}->{'bind_pw'});
+$mesg->code && die "Couldn't connect: ".$mesg->error."\n";
 
 print "Enter alias:\n";
 $alias = <STDIN>;
@@ -50,7 +49,7 @@ $answer = <STDIN>;
 chomp($answer);
 
 if ($answer eq 'y') {
-    my $result = $ldap->add("cn=$alias,$basedn",
+    my $result = $ldap->add("cn=$alias,$settings->{'aliases'}->{'base_dn'}",
         attrs => [
             'name'        => $alias,
             'mail'        => $alias,
@@ -58,7 +57,7 @@ if ($answer eq 'y') {
             'maildrop'    => \@destinations,
         ]
     );
-    $result->code && warn "failed to add entry: ", $result->error ;
+    $result->code && warn "failed to add entry: ".$result->error."\n";
 }
 
 print "Alias created!\n";
